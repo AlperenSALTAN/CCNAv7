@@ -1,0 +1,127 @@
+Switch>en
+Switch#conf t
+Switch(config)#hostname EEF
+EEF(config)#vlan 10
+EEF(config-vlan)#vlan 5
+EEF(config-vlan)#int fa0/1
+EEF(config-if)#sw m a
+EEF(config-if)#sw a vl 5
+EEF(config-if)#int fa0/2
+EEF(config-if)#sw m a
+EEF(config-if)#sw a vl 10
+EEF(config-if)#int range fa0/3-4
+EEF(config-if-range)#sw m t
+
+Switch>en
+Switch#conf t
+Switch(config)#hostname INS
+INS(config)#vlan 5
+INS(config-vlan)#vlan 10
+INS(config-vlan)#int fa0/1
+INS(config-if)#sw m a
+INS(config-if)#sw a vl 5
+INS(config-if)#int fa0/2
+INS(config-if)#sw m a
+INS(config-if)#sw a vl 10
+INS(config-if)#int range fa0/3-4
+INS(config-if-range)#sw m t
+
+Switch>en
+Switch#conf t
+Switch(config)#hostname Core-SW3
+Core-SW3(config)#vlan 5
+Core-SW3(config-vlan)#vlan 10
+Core-SW3(config-vlan)#int range fa0/1-3
+Core-SW3(config-if-range)#sw m t
+
+Switch>en
+Switch#conf t
+Switch(config)#hostname Core-SW2
+Core-SW2(config)#vlan 5
+Core-SW2(config-vlan)#vlan 10
+Core-SW2(config-vlan)#int range fa0/1-3
+Core-SW2(config-if-range)#sw m t
+Core-SW2(config-if-range)#exit
+
+(Şuanki Topolojiye göre EEF'nin herşeyin merkezi olması, EEF'nin root switch olması cok saçma bizim root switchimiz Core'lardan birisi olması lazım. Şimdi root'un kim oldugunu görelim. Herhangi bir switch'i açıyoruz örneğin SW3)
+
+Core-SW3(config-if-range)#end
+Core-SW3#
+%SYS-5-CONFIG_I: Configured from console by console
+
+Core-SW3#
+Core-SW3#sh sp
+Core-SW3#sh spanning-tree ?
+Core-SW3#sh spanning-tree summary
+( summary bize diyor ki sen 3 tane vlan'de STP çalışıyor. PVSTP var diyor. Hangisinde ne iş yapıyor detayli görmek istiyoruz, mesela vlan 5'deki bana bilgileri göster)
+
+Core-SW3#sh spanning-tree vlan 5
+
+( bize dediği ben bu ortamda bulunan bir bridge'im benim priority'im bu. Bu ortamda bir de root var ve root priority'si budur diyor. Fakat root ID'sinin mac adresi daha düşük oldugu için Root ID kazandı diyor. Ve Benim COST'um 19 diyor bu da 100 mbps bir hattır. Ve 2. interface'den baglıyım aramızda hello mesajları 2 saniye, max age 20 saniye ve forward 15 saniye diyor. Alttaki Bridge ID de bu switchin Mac adresimiz ve Bu switche bağlı her interface durumunu gösteriyor.  Fa1 designated diyor. Fa2 interface'i root int. Fa3 interface designated diyor. Sadece bu grafiğe bakarak EEF switchinin root oldugunu görebiliriz. Kontrol edelim gerçekten de EEF root switch mi)
+
+EEF#sh spanning-tree vlan 5
+
+( Buradaki çıktının bize söylediği, root switch priority'si ve mac'i budur. Benim Mac'im ve priority'im budur diyor. Ve Root ve Bridge ID aynı oldugu için Root Switchimiz. Anlamak için hiçbir interface'inde root rolü yoktur bunu sadece root switchde görürüz. Diğerlerinde illa ki birinde designated olmayan port olacaktır. Biz bunun böyle olmasını istemiyoruz. Neden EEF switchi root olsun istiyoruz. Biz core cihazlarımızdan birinde root olsun istiyoruz. Bir cihaz tüm gücüyle çalışırken diğeri yedekli kalsın istemiyoruz. 
+
+Admin cihazı adminle haberleşirken EEF'den > SW3 > INS üzerinden gitmesini istiyoruz sadece 3 switch üzerinden geçsin istiyoruz.
+
+Misafir birinin misafir networkuyle konuşmasını isterken de EEF'den > SW2 > INS üzerinden gitmesini istiyoruz. Bu Sayede Load balancing yapacağız. Yanii bir switch başka bir görev yaparken diğeri başka bir görev yapacak. Peki bu yapılandırmayı nasıl yapacağız?
+
+Bizim ilk önce SW3'e girip VLAN5'i sen kabul et buranın root'u ol diyeceğiz.)
+
+Core-SW3(config)#spanning-tree vlan 5 priority ?
+<0-61440> bridge priority in increments of 4096
+Core-SW3(config)#spanning-tree vlan 5 priority 0
+( priority'si en düşük sen ol ki bu ortamın root'u sen ol)
+Core-SW3(config)#end
+Core-SW3#sh spanning-tree vlan 5
+( gördüğümüz gibi hemen bu cihazda Root ID'de this bridge is the root yazmaya başladı. Bütün portları designated portta oldugu için artık root'da. EEF switch'e girip bakıyoruz.
+EEF#sh spanning-tree vlan 5
+
+Core-SW2(config)#spanning-tree vlan 10 priority 0
+(böylelikle Switch2'nin de VLAN 10 için Root Switch oldugunu belirttik. Az önce bütün Haberleşmeler EEF'den dönmek zorunda kalıyordu şimdi ise 2 Core Switch'den dönmeye başladı. 
+
+Core-SW2(config)#exit
+Core-SW2#show spanning-tree vlan 10
+
+( Simulasyon modundan Misafir portundaki bir cihazi söküyorum. Söktügümde EEF switchi renkli paketi cıkartıyor. Bu pemde paket BPDU paketidir. Cihazın söküldüğünü görünce ortama bağırıyor ve bütün yapı koptu diye merkeze söyledi. Böylelikle topolojinin tamamını sıfırlamaya çalışıyor bunu önlemek için switchin fa02 portuna girip spanning-tree'de portfast diye çalış.)
+
+EEF#CONF T
+Enter configuration commands, one per line. End with CNTL/Z.
+EEF(config)#int fa0/2
+EEF(config-if)#spanning-tree portfast
+
+(burada bize sadece uyarı veriyor.  Ve Caution adında bilgilendirme veriyor ben loop yapabilirim beni engelledin cok dikkatli olman gerekir. Single host'a bağlı olman gerekir diyor. Kesinlikle bu porta switch-router-hub koyacaksan bu yapılandırma yapma diyor. Biz bilgisayarı geri taktıgımızda hemen yeşil yanacaktır. Yanii STP'de bütün adımlar atlandı ve forwarding mekanizmasına geçti. 
+
+Aynısını şimdi Fa0/5'e yapalım.)
+
+
+EEF(config-if)#int fa0/5
+EEF(config-if)#spanning-tree portfast
+
+( Şimdi yapacağımız adımda bütün planlama patlayabileceği için, Önce bir yedeğini alalim
+
+Kullanıcıyı kaldırıp yerine bir 2960 switch koyuyorum.  Ve hatta 2 tane otomatik kablo bağlıyoruz. Misafir'e birisi switchini bağladı ama portfast yok bundan dolayı sürekli bir loop oldugu için sürekli dönecektir. Aynı şekil 1. port için de portfast'i açalım)
+
+EEF(config-if)#int fa0/1
+EEF(config-if)#spanning-tree portfast
+EEF(config-if)#int fa0/2
+EEF(config-if)#spanning-tree portfast
+
+( bütün portlar şuanda ayakta fakat simulasyon moda geçiş yapiyorum ve hatta switchin arkasına da bir bilgisayar takıp o PC'den bir tane ip adresi verip DHCP isteyip brodcast mesajı cıkartacağım)
+
+Kesinlikle biz burada böyle bir loop olmasını istemiyoruz Fa0/2'den cıkan fa0/5'den dönecekti bu nedenle burada asla switch gibi cihaz koyulmasını istemiyoruz bu nedenle ayırt edeceğimiz özellik switchin bpdu mesajı göndermesidir.  Bilgisayar ve switchimi kaldırıyorum.)
+
+EEF(config-if)#int fa0/2
+EEF(config-if)#spanning-tree bpduguard enable
+
+(bpduguard ile burada biz bu interface'den bpdu mesaj korumasını aktifleştirdik. 
+Engelleden kastımız bütün trafiği kapatacak şekilde bir engellemedir. 
+
+EEF switch'e bir Switch bağladıgımız zaman buradaki hat hiçbir zaman aktifleşmeyecektir. Turuncu bile olmayacaktır. Switch'e girip kontrol edelim.)
+
+"%PM-4-ERR_DISABLE: bpduguard error detected on 0/2, putting 0/2 in err-disable state"
+
+EEF(config-if)#do sh int stat (Fa0/2 err-disabled 10)
+
+(Eğer biz switchi söküp yerine bilgisayar taksak bile hala daha güvenlik önlemi aldıgı için kırmızı yanacaktır kapalı kalacaktır. Açmamız için yapılandırma gerekiyor.  Böylelikle misafirlerin arkadan iş çevirmesini engellemek için kullandıgımız bir özelliktir. Yada O interface'i kapatıp açarsak düzelecektir.)
