@@ -1,0 +1,54 @@
+** Eğer ki ilk örnekte Router'in LAN'a giden tarafını ipv6 routing'i açarsak Auto flag'i 1 olacağı için SLAAC kendi kendine aktif olacaktır. Bu en temel yapıdır. **
+
+	1. ONLY SLAAC
+--------------------------------------------------
+Router0(config)#int g0/0
+Router0(config-if)#ipv6 add 2001:db8:aced:1::1/64
+Router0(config-if)#ipv6 add fe80::1 link-local
+Router0(config-if)#no sh
+Router0(config-if)#END
+Router0#sh ipv6 route
+Router0(config-if)#conf t
+Router0(config)#ipv6 unicast-routing
+
+PC0 > Ipv6 Automatic
+
+(Eğer ki DNS tanımlamak da istiyorsak SLAAC bizim için yeterli değil)
+
+	2. SLAAC + Stateless DHCP
+-----------------------------------------------
+Router0(1)(config)#int g0/0
+Router0(1)(config-if)#ipv6 add 2001:db8:aced:2::1/64
+Router0(1)(config-if)#ipv6 add fe80::1 link-local
+Router0(1)(config-if)#no sh
+Router0(1)(config-if)#ipv6 nd other-config-flag
+Router0(1)(config-if)#exit
+Router0(1)(config)#ipv6 dhcp pool dns_bilgileri
+Router0(1)(config-dhcpv6)#dns-server 2001:dead::dead:1
+Router0(1)(config-dhcpv6)#exit
+Router0(1)(config)#int g0/0
+Router0(1)(config-if)#ipv6 dhcp server dns_bilgileri
+Router0(1)(config-if)#exit
+Router0(1)(config)#ipv6 unicast-routing
+
+PC0(1)> IPv6 Automatic
+
+** Fakat biz şuan Kimlerin hangi IP'yi aldıgını historical olarak göremiyoruz bunları loglama ve kaydetmemiz lazım eğer bunları yapmak istemeyip eski yöntem kullanmak istiyorsak Stateful DHCP kullanabiliriz. Bunu Router'dan RA verme M frame'i al diyecektik. **
+
+	3. Stateful DHCP
+----------------------------------------------
+Router0(1)(1)(config)#int g0/0
+Router0(1)(1)(config-if)#ipv6 add 2001:db8:aced:3::1/64
+Router0(1)(1)(config-if)#ipv6 add fe80::1 link-local
+
+*Bazı durumlarda A flag'i auto 1 kalabiliyor. Bazı Windows bilgisayarlar SLAAC'e geçiş yapabiliyormuş.  Bunu yapmaması için nd prefix default-no autoconfig yapmamız gerekiyor bunu paket tracer'de çalışmıyor.*
+
+Router0(1)(1)(config-if)#no sh
+Router0(1)(1)(config-if)#ipv6 dhcp pool ipv6_liste
+Router0(1)(1)(config-dhcpv6)#add prefix 2001:db8:aced:3::/64
+Router0(1)(1)(config-dhcpv6)#dns-server 2001:dead::dead:1
+Router0(1)(1)(config-if)#ipv6 dhcp server ipv6_liste
+Router0(1)(1)(config-if)#ipv6 unicast-routing
+
+PC0(2) > Ipv6 Automatic
+** Cihaz SLAAC konuşmadıgı için Router'in GW'ine ihtiyacı yok. Eğer GW'i olursa SLAAC olabileceği için Router'a kaydedecek.  Packet tracer'dan kaynaklı GW geç geldi.**
