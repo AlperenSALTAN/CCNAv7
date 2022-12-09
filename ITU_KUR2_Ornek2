@@ -1,0 +1,88 @@
+Core>en
+Core#show vtp stat
+
+Core(config)#Vlan 20
+Core(config-vlan)#Name misafir
+Core(config-vlan)#Exit
+Core(config)#int fa0/2
+Core(config-if)#Switchport mode trunk 
+
+Core(config)#Vlan 10
+Core(config-vlan)#Name adminler
+Core(config-vlan)#Exit
+Core(config#İnt fa0/2
+Core(config-if)#Switchport mode trunk
+Core(config-interface)#exit
+Core(config)#int range fa0/1-4
+Core(config-range)#switchport mode trunk
+
+Switch1>En
+Switch1#Conf t
+Switch1(config)#vtp domain itu
+Switch1(config)#vtp mode client
+Switch1(config)#int fa 0/1
+Switch1(config-if)#Sw m t
+
+Switch2>En
+Switch2#Conf t
+Switch2(config)#vtp domain itu
+Switch2(config)#vtp mode client
+Switch2(config)#int fa 0/1
+Switch2(config-if)#Sw m t
+
+Switch3>En
+Switch3#Conf t
+Switch3(config)#vtp domain itu
+Switch3(config)#vtp mode client
+Switch3(config)#int fa 0/1
+Switch3(config-if)#Sw m t
+
+Switch4>En
+Switch4#Conf t
+Switch4(config)#vtp domain itu
+Switch4(config)#vtp mode client
+Switch4(config)#int fa 0/1
+Switch4(config-if)#Sw m t
+
+Switch1(config)#İnt fa0/2
+Switch1(config-if)#Switchport mode access
+Switch1(config-if)#Switchport access vlan 10
+Switch1(config-if)#int fa0/1
+Switch1(config-if)#Switchport mode trunk native vlan 100
+
+Switch2(config)#İnt fa0/2
+Switch2(config-if)#Switchport mode access
+Switch2(config-if)#Switchport access vlan 20
+Switch2(config-if)#int fa0/1
+Switch2(config-if)#Switchport mode trunk native vlan 100
+
+Switch3(config)#İnt fa0/2
+Switch3(config-if)#Switchport mode access
+Switch3(config-if)#Switchport access vlan 30
+Switch3(config-if)#int fa0/1
+Switch3(config-if)#Switchport mode trunk native vlan 100
+
+Switch4(config)#İnt fa0/2
+Switch4(config-if)#Switchport mode access
+Switch4(config-if)#Switchport access vlan 10
+Switch4(config)#İnt fa0/3
+Switch4(config-if)#Switchport mode access
+Switch4(config-if)#Switchport access vlan 20
+Switch4(config-if)#int fa0/1
+Switch4(config-if)#Switchport mode trunk native vlan 100
+
+Core(config)# int range fa0/1-4
+Core(config-if)#Switchport mode trunk native vlan 100
+
+Core(config-ig)#İnt fa0/1
+Core(config-ig)#Switchport trunk allowed vlan 20,100,200
+Core(config-ig)#İnt fa0/2
+Core(config-ig)#Switchport trunk allowed vlan 10,100,200
+Core(config-ig)#İnt fa0/3
+Core(config-ig)#Switchport trunk allowed vlan 9-21,100,200
+Core(config-ig)#İnt fa0/4
+Core(config-ig)#Switchport trunk allowed vlan 30,100,200
+
+Switch2(config)# int vlan 200
+Switch2(config-if)# end
+Switch2(config)#Show ip int brief
