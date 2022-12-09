@@ -1,0 +1,102 @@
+Switch4(config)#vlan 50
+Switch4(config-vlan)#vlan 60
+Switch4(config-vlan)#exit
+Switch4(config)#int fa0/2
+Switch4(config-if)#sw m ac
+Switch4(config-if)#sw ac vlan 60
+Switch4(config-vlan)#exit
+Switch4(config)#int fa0/2
+Switch4(config-if)#sw m ac
+Switch4(config-if)#sw ac vlan 60
+Switch4(config-if)#int fa0/3
+Switch4(config-if)#sw m a
+Switch4(config-if)#sw ac vlan 50
+Switch4(config-if)#int fa0/1
+Switch4(config-if)#sw m tr
+
+3650-ML(config)#vlan 50
+3650-ML(config-vlan)#vlan 60
+3650-ML(config-vlan)#int g1/0/1
+3650-ML(config-if)#sw m t
+3650-ML(config-if)#int vlan 50
+3650-ML(config-if)#ip add 192.168.50.1 255.255.255.0
+3650-ML(config-if)#int vlan 60
+3650-ML(config-if)#ip add 192.168.60.1 255.255.255.0
+3650-ML(config-if)#exit
+3650-ML(config)#ip routing
+3650-ML(config)#int g1/0/2
+3650-ML(config-if)#no switchport
+3650-ML(config-if)#ip add 192.168.4.2 255.255.255.0
+
+R2(config)#int g0/0
+R2(config-if)#ip add 192.168.3.1 255.255.255.0
+R2(config-if)#no sh
+R2(config-if)#int g0/1
+R2(config-if)#ip add 192.168.4.1 255.255.255.0
+R2(config-if)#no sh
+R2(config-if)#int g0/2
+R2(config-if)#ip add 192.168.5.1 255.255.255.0
+R2(config-if)#no sh
+
+R0(config)#int g0/0
+R0(config-if)#ip add 192.168.1.1 255.255.255.0
+R0(config-if)#no sh
+
+R1(config)#int g0/0
+R1(config-if)#ip add 192.168.2.1 255.255.255.0
+R1(config-if)#no sh
+
+R0(config)#ip route 0.0.0.0 0.0.0.0 g0/1
+R1(config)#ip route 0.0.0.0 0.0.0.0 g0/1
+3650-ML(config)#ip route 0.0.0.0 0.0.0.0 g1/0/2
+
+R2#sh ip route
+R2(config)#ip route 192.168.1.0 255.255.255.0 g0/0
+R2(config)#ip route 192.168.2.0 255.255.255.0 g0/0
+R2(config)#ip route 192.168.50.0 255.255.255.0 g0/1
+R2(config)#ip route 192.168.60.0 255.255.255.0 g0/1
+R2#sh r
+R2#sh ip route
+
+Server0> 192.168.1.100/24 - 192.168.1.1
+
+** Günümüzde DHCP'nin Router üzerinde olmasını isteriz bu yüzden LAN'in içerisinde oluşturmak istemeyiz, Gelelim Router1'de  de farklı deneyelim **
+
+R1(config)#ip dhcp excluded-address 192.168.2.1
+R1(config)#ip dhcp excluded-address 192.168.2.1 192.168.2.9
+R1(config)#ip dhcp excluded-address 192.168.2.20 192.168.2.254
+R1(config)#ip dhcp pool pembe_net
+R1(dhcp-config)#network 192.168.2.0 255.255.255.0
+R1(dhcp-config)#default-router 192.168.2.1
+R1(dhcp-config)#dns-server 8.8.8.8
+R1(dhcp-config)#exit
+
+PC1> DHCP
+
+** Enterprise networkde yüzlerce binlerce cihaz varken bunu router'dan yapmak istemeyiz, Bizim merkezi bir yerden diğer uçlara yönlendirebileceğimiz helper işlemi yapmamız lazım **
+
+Şirket DHCP > 192.168.5.100/24 - 192.168.5.1
+
+3650-ML(config)#int vlan 60
+3650-ML(config-if)#ip helper-address 192.168.5.100
+3650-ML(config-if)#int vlan 50
+3650-ML(config-if)#ip helper-address 192.168.5.100
+
+PC2> DHCP
+PC3 > DHCP
+
+** Şuana kadar yaptıgımız LAN'lar içindi peki routerlar yani modemler ISP üzerinden DHCP ile nasıl IP alacaklar buna bakalım. **
+
+Ev Routerlar > 192.168.5.99/24 - 192.168.5.1 
+
+** Burada Router0 ve Router1'in ortak çıktığı nokta Router2'nin g0/0 interface'i. Oraya verilen IP adresi 192.168.3.1 oldugu için GW'imizi belirttik **
+
+R2(config)#int g0/0
+R2(config-if)#no sh
+R2(config-if)#ip helper-address 192.168.5.99
+
+R0(config-if)#ip add dhcp
+
+R1(config)#int g0/1
+R1(config-if)#no sh
+R1(config-if)#ip add dhcp
