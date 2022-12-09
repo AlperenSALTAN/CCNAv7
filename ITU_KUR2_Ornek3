@@ -1,0 +1,66 @@
+Switch1#conf t
+Switch1(config)#vlan 100
+Switch1(config-vlan)#ex
+Switch1(config)#vlan 200
+Switch1(config-vlan)#ex
+Switch1#show vlan brief
+Switch1#conf t
+Switch1(config)#int fa0/1
+Switch1(config-if)#switchport mode access
+Switch1(config-if)#switchport access vlan 200
+Switch1(config-if)#exit
+Switch1(config)#int fa0/2
+Switch1(config-if)#switchport mode access
+Switch1(config-if)#switchport access vlan 100
+Switch1(config-if)#int fa0/3
+Switch1(config-if)#switchport mode trunk
+Switch1(config)#do show vlan brief
+Switch1(config)#exit
+Switch1#do sh interfaces trunk
+
+Switch0>en
+Switch0#conf t
+Switch0(config)#vlan 100
+Switch0(config-vlan)#vlan 200
+Switch0(config-vlan)#exit
+Switch0(config)#int fa0/1
+Switch0(config-if)#switchport mode access
+Switch0(config-if)#switchport access vlan 200
+Switch0(config-if)#int fa0/2
+Switch0(config-if)#switchport mode access
+Switch0(config-if)#switchport access vlan 100
+Switch0(config-if)#int fa0/3
+Switch0(config-if)#switchport mode trunk
+
+Core>en
+Core#conf t
+Core(config)#int range fa 0/1-2
+Core(config-if-range)#switchport mode trunk
+Core(config-if-range)#exit
+Core(config)#vlan 100
+Core(config-vlan)#vlan 200
+
+PC0> ping 192.168.100.20 (v')
+          ping 192.168.200.20 (X)
+
+Core(config-vlan)#int fa 0/3
+Core(config-if)#switchport mode access
+Core(config-if)#switchport access vlan 100
+Core(config-if)#int fa 0/4
+Core(config-if)#switchport mode access
+Core(config-if)#switchport access vlan 200
+
+Router>en
+Router#conf t
+Router(config)#int g0/0
+Router(config-if)#ip address 192.168.100.1 255.255.255.0
+Router(config-if)#no sh
+Router(config-if)#int g0/1
+Router(config-if)#ip address 192.168.200.1 255.255.255.0
+Router(config-if)#no sh
+Router(config-if)#do sh ip route
+
+PC0 > ping 192.168.200.20
+           ping 192.169.200.10
+
+( Yeni bir vlan oluşturmak istedigimizde core ile router arasında yeni bir kablo çekmemiz gerekecek, bir kez daha vlan'a ihtiyacımız olursa router'da yeterli port bulunmayabilir. Bu yüzden Legacy InterVLAN Routing'i kullanmayı pek tercih etmeyebiliriz.)
