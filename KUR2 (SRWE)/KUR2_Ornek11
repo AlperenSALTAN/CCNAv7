@@ -1,0 +1,199 @@
+/**            L2 Security  - VLAN (Native,Allowed) - Static MAC - Sticky  - DHCP Snooping - ARP Inspection - PortFast & BPDUGuard        **/
+
+SW0(config)#vlan 10
+SW0(config-vlan)#vlan 20
+SW0(config-vlan)#vlan 50
+SW0(config-vlan)#name unused
+SW0(config-vlan)#vlan 80
+SW0(config-vlan)#name unauthortized
+SW0(config)#int fa0/1
+SW0(config-if)#sw m ac
+SW0(config-if)#sw ac vl 20
+SW0(config-if)#int fa0/2
+SW0(config-if)#sw m ac
+SW0(config-if)#sw ac vl 10
+SW0(config-if)#int fa0/3
+SW0(config-if)#sw m tr
+
+SW1(config)#vlan 10
+SW1(config-vlan)#vlan 20
+SW1(config-vlan)#vlan 50
+SW1(config-vlan)#vlan 80
+SW1(config-vlan)#int fa0/1
+SW1(config-if)#sw m a
+SW1(config-if)#sw ac vl 20
+SW1(config-if)#int fa0/2
+SW1(config-if)#sw m a
+SW1(config-if)#sw ac vl 10
+SW1(config-if)#int fa0/3
+SW1(config-if)#sw m t
+
+3650-SW(config)#vlan 10
+3650-SW(config-vlan)#vlan 20
+3650-SW(config-vlan)#vlan 50
+3650-SW(config-vlan)#vlan 80
+3650-SW(config-vlan)#int range g1/0/1-2
+3650-SW(config-if-range)#sw m t
+3650-SW(config)#int gi1/0/3
+3650-SW(config-if)#no switchport
+3650-SW(config-if)#ip add 192.168.100.1 255.255.255.0
+3650-SW(config-if)#int vlan 10
+3650-SW(config-if)#ip add 192.168.10.1 255.255.255.0
+3650-SW(config-if)#int vlan 20
+3650-SW(config-if)#ip add 192.168.20.1 255.255.255.0
+3650-SW(config)#ip routing
+
+SW0#sh int stat
+SW0(config)#int range fa0/4-24
+SW0(config-if-range)#sw m ac
+SW0(config-if-range)#sw ac vl 50
+SW0(config-if-range)#sh
+SW0(config-if-range)#int range gi0/1-2
+SW0(config-if-range)#sw m ac
+SW0(config-if-range)#sw ac vl 50
+SW0(config-if-range)#sh
+
+PC1> ipconfig /all
+
+SW0(config)#int fa0/2
+SW0(config-if)#switchport port-security 
+SW0(config-if)#do show port-se
+SW0(config-if)#switchport port-sec mac-add 00E0.A304.E582
+// Bu porttan sadece tek bir MAC adresine izin ver.
+SW0(config-if)#switchport port-secu aging time 15
+// Bu portta kaydettigin mac adresi 15 dakika içinde ağda değilse yeni 1 misafir mac adresi bağlantısına izin ver.
+SW0(config-if)#switchport port-secu max 2
+// Bu portta maximum 2 mac adresi görülebilir.
+SW0(config-if)#switchport port-secu violation restrict
+// Eğer 2'den fazla cihaz 15 dakika içerisinde bağlanırsa portu kapatma yerine bildirim ver. ((Güvendiğimiz için))
+
+SW1(config)#int Fa0/2
+SW1(config-if)#switchport port-security 
+SW1(config-if)#switchport port-security mac-add sticky
+// Biz ilk haberleşmede cihazın bağlı oldugunu bildigimiz için dinamik olarak otomatik kendin bunu kaydet dedik.
+SW1(config-if)#switchport port-security violation protect
+// Bir hatalı bağlantı sonucunda bu sefer bu portu koruma moduna alacak bildirim vermeyecek.
+SW1(config-if)#int fa0/1
+SW1(config-if)#sw port-sec
+// Defaulta zaten en güvenli seviyede getirdiği için bu interface için fazla bir şey yapmıyoruz
+SW1(config-if)#sw port-sec aging time 1
+// 1 dakikada 1 yeni bir mac adres bağlantısına izin versin
+// Sırayla tüm cihazlardan DHCP paketi aldık ve iptal ettik ağda trafik oluşturduk. Switchlerin MAC adresleri bu haberleşimede kaydedildi
+
+SW0#sh port-security interface fa0/2
+// Şimdi PC1'in bağlantısını söküp yerine PC4 koyuyoruz ve problem yaratıyoruz Ardından PC4'den bir Paket cıkardıgımız zaman hemen port kapanıyor.
+SW0#sh port-security interface fa0/2
+// Ve biz tekrardan Kayıtlı MAC adres cihazını taktıgımızda link olmuyor ve böylece birisi bizim bu hat ile oynamış bunu anlıyoruz.
+SW0#sh int status
+// Biz eğer kendimiz kapatırsak disabled gösterirdi fakat err-disabled gösteriyor.
+SW0#sh int status err-dis
+// Normal bir switchde neden kapandıgını bu komut ile öğrenebiliriz.
+SW0(config)#int fa0/2
+SW0(config-if)#no sh
+// Bunu denememize rağmen port açılmıyor, Errordan kaynaklı oldugu için. Önce yapılması gereken şey portu bizim kapatmamız ve ardından yeniden açmamız
+SW0(config-if)#sh
+SW0(config-if)#no sh
+SW0#sh port-security int fa0/1
+// PC3'ün bağlantısını koparalım
+SW0#sh mac-add
+// Baktıgımızda herhangi bir data yok Fa0/1'e dair. Fakat fa0/1'in port-security tablosunda hala bir mac adresi var. 15-30 Dakika simülasyonda ilerlettigimiz zaman normal koşullarda son kayıtlı mac-adresini port-security'den silmesi gerekiyor.
+// Yeni bir bilgisayar bağladık ve tekrar port-security'i kontrol ettigimizde total'de 1 mac adresi gördük. Biz bu Sw0'in arkasına bir switch daha koyarak 2 cihaz bağlıyoruz.
+SW0#sh port-sec int fa0/1
+// Baktıgımız zaman Maximum 2 mac adres sınırı olan port-security'de totalde 2 mac adresi kullanıldıgını gördük.
+// 3. Bir bilgisayarı bağladıgımız zaman ve haberleştirdigimizde port-security'den baktıgımızda bize violation hatası veriyor uyarıyor bizi.
+SW0#sh logging
+// Normal koşullarda loggingleri görüntülediğimizde bize violation'lari de gösterir.
+
+SW1#sh port-sec int fa0/2
+// Violation modu protect olarak geçiyor. Maximum 1 mac adresi gözüküyor sticky ile dinamik mac adresini kayıt ettik.
+SW1#sh r
+// baktıgımızda "switchport port-security mac-address sticky 0002.4A71.65AA" otomatik olarak port-security ile eklenmiş.
+
+SW0(config)#int fa0/3
+SW0(config-if)#sw trunk native vl 50
+SW0(config-if)#sw trunk allowed vlan 10,20,50
+
+SW1(config)#int fa0/3
+SW1(config-if)#sw trunk native vlan 50
+SW1(config-if)#sw trunk allowed vlan 10,20,50
+
+3650-SW(config)#int ra gi1/0/1-2
+3650-SW(config-if-range)#sw trunk native vl 50
+3650-SW(config-if-range)#sw trunk allowed vl 10,20,50
+
+SW0(config-if)#switchport nonegotiate
+// Biz SW0'a access switch dedik portun trunk fakat karşıdaki interface dinamik olursa otomatik olarak onu trunk yapmaya çalışacak. DTP'yi tamamen kapatıyoruz.
+SW1(config-if)#SW nonegotiate 
+3650-SW(config-if-range)#switchport nonegotiate
+
+DHCP Server> vlan 10 (192.168.10.1 - 255.255.255.0 - 192.168.10.10 - 10 user)
+                          vlan 20 (192.168.20.1 - 255.255.255.0 - 192.168.20.10 - 10 user)
+IP >                   192.168.100.100 - 255.255.255.0 - 192.168.100.1
+
+3650-SW(config-if-range)#int vlan 10
+3650-SW(config-if)#ip helper-address 192.168.100.100
+3650-SW(config-if)#int vlan 20
+3650-SW(config-if)#ip helper-address 192.168.100.100
+
+// Diyelim ki ağımıza bir başka yönetici geldi ve Adminler ağından Sw0'a bir bağlantı sağladı ve yaptıgı tek şey o interface'i no sh yapıp bırakmak oldu burada bir güvenlik açığı oluştu. 
+SW0#conf t
+SW0(config)#int fa0/4
+SW0(config-if)#no sh
+SW0(config-if)#sw m ac
+SW0(config-if)#sw ac vl 10
+
+//Eğer bu şekilde bırakılırsa otomatik IP alabilecek. (192.168.10.12) sonrasında bu PC'ye bir virüs girsin ve PC gibi çalışmayı bırakıp bir DHCP sunucusu gibi çalışmaya başlayacak ve sonrasında bu PC yerine bir DHCP sunucusu koyduk sonrasında aldığı IP adres bilgilerini girdik sanki bu bilgisayar bir DHCP sunucusuna dönüşmüş hale gelecek. Ve Bir DHCP hizmeti aktif hale getirdi diyelim IP Havuzundaki Default GW'yi kendi IP'si olarak girerek bütün haberleşme kendi üzerinden dönecek şekilde hale bürünüyor. Diğer PC'lerden DHCP Paketi cıkardıgımızda GW olarak 10.12 adresini alıyor. 
+
+SW0(config)#ip dhcp snooping
+
+// bunu yaptıgımızda hiçbir interface güvenli değil olarak algılıyor.
+SW0(config)#ip dhcp snooping vl 10,20
+// vlan 10 ve vlan 20'de çalışsın dedik
+SW0(config)#int fa0/3
+SW0(config-if)#ip dhcp snooping trust
+// bu yapılandırmada bir tek fa0/3'den gelecek dhcp sunucularına izin ver dedik.  Genellikle uzak networkde oldugu için uplink'e veririz. 
+
+SW1(config)#ip dhcp snooping
+SW1(config)#ip dhcp snooping vl 10,20
+SW1(config)#int fa0/3
+SW1(config-if)#ip dhcp snooping trust
+
+SW0#sh ip dhcp snooping binding
+// snooping aktif olan ağlarda hangi bilgisayar hangi ip adresini almış. Normalde switchlerde IP gibi bu tarz tablolari göremeyiz. Eğer lease (kiralama süresi) de çalışsaydı bunu görecektik.
+
+// NOT: Genellikle DHCP Snooping merkezi cihazlarda açılmaz kullanıcıların bağlı oldugu cihazlarda açılır. Yoksa performans kaybına yol açacaktır.
+
+SW0(config)#int ra fa0/1-2
+SW0(config-if-range)#ip dhcp snooping limit rate 6
+// Bir saniyede Bir DHCP Paketinin host uçlarda kaç tane geçebileceğini söyleyebiliyoruz. Default olarak 6 diyoruz. 1 saniyede max 6 DHCP Paketi kabul edebilir.
+
+SW0(config)#do sh loggin
+// normal şartlarda bütün switchdeki logları görüntüleyerek güvenilmeyen zararlı olan pc'yi tespit edebiliriz.
+SW0#debug ip dhcp snooping event
+// normal şartlarda Bu komut ile anlık olarak ne sıkıntılar var görebiliriz. 
+SW0#debug ip dhcp snooping packet
+// DHCP snooping üzerine oluşan debug paketlerini detaylı bir şekilde gösterir.
+
+// ARP Inspection açılması için DHCP Snooping'in açılması lazım. İstedigimiz static ip'si olan interface'lere trust yapabiliriz. Bu yapılandırma direkt Host'larda uygulanabilir.
+SW0(config)#ip arp inspection vl 10,20
+// artık vlan 10 ve vlan 20'de static mac adresine izin yok.
+SW0(config)#ip arp inspection validate ip src-mac dst-mac
+// ve bu arp inspection'u hem ip adresine hem kaynak ve hedef mac adresine göre yaptırır. Bu işlem CPU'yu zorlayabilir. Sadece IP ve src-mac olarak yazmamız da yeterli
+SW0(config)#int fa0/3
+SW0(config-if)#ip arp inspection trust
+// fa0/3'ün buraya biz istisna koyuyoruz ve arp inspection burayı güvenli biliyor. Test edelim bir adet PC bağlıyorum SW0'a
+
+PC4> 192.168.10.50 255.255.255.0 192.168.10.1
+// Ve PC1'den bu IP adresine ping attıgımız zaman normal şartlarda ping'in gitmemesi gerekiyor.
+
+SW0(config)#int ra fa0/1-2
+SW0(config-if-range)#spanning-tree portfast
+// portun hızlı bir şekilde STP'ye takılmadan anında bağlantı kurmasını sağladık.
+SW0(config-if-range)#spanning-tree bpduguard enable
+// Bu portlardan bir BPDU paketi beklemiyoruz ve bu yüzden aktif hale getirdik. Ve SW0'a bir misafir ağından switch takalım ve port otomatik kapandı ve sh int status ile  err-disabled oldugunu görüyoruz. Biz tekrar bilgisayari geri taktıgımızda da portun aktif olması için kapatıp açmamız gerekiyor.
+
+SW0(config)#int fa 0/1
+SW0(config-if)#sh
+SW0(config-if)#no sh
+
+![alt text](https://www.hizliresim.com/ekdob64)
