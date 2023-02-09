@@ -1,0 +1,50 @@
+Core>en
+Core#conf t
+Core(config)#int fa0/5
+Core(config-if)#switchport mode trunk
+Core(config-if)#switchport trunk allowed vlan 10,20,30,200
+
+Router>en
+Router#conf t
+Router(config)#int g0/0
+Router(config-if)#no sh
+Router(config-if)#exit
+Router(config)#do sh ip int brief
+Router(config)#int g0/0.10
+ ( . Burada alt interface oluşturuyor. Sonraki rakam vlan id değildir ama sektörde anlaşılması için vlan id ile bir tutuluyor)
+Router(config-subif)#enc
+Router(config-subif)#encapsulation ?
+dot1Q IEEE 802.1Q Virtual LAN
+Router(config-subif)#encapsulation dot1Q ?
+<1-4094> IEEE 802.1Q VLAN ID
+Router(config-subif)#encapsulation dot1Q 10
+Router(config-subif)#ip address 192.168.10.1 255.255.255.0
+Router(config-subif)#end
+Router#sh ip int brief
+Router#
+Router(config)#int g0/0.20
+Router(config-subif)#no encapsulation dot1Q 20
+Router(config-subif)#ip address 192.168.20.1 255.255.255.0
+Router(config-subif)#
+Router(config-subif)#int g0/0.30
+Router(config-subif)#encapsulation dot1Q 30
+Router(config-subif)#ip address 192.168.30.1 255.255.255.0
+Router(config-subif)#
+Router(config-subif)#int g0/0.200
+Router(config-subif)#encapsulation dot1Q 200
+Router(config-subif)#ip address 192.168.200.1 255.255.255.0
+Router(config-subif)#
+Router(config-subif)#end
+Router#sh ip int brief
+Router#sh r
+Router#sh ip route
+
+PC0> ping 192.168.20.11
+PC0 web >  192.168.30.10
+
+Switch2(config)#int vlan 200
+Switch2(config-if)#ip address 192.168.200.10 255.255.255.0
+Switch2(config-if)#exit
+Switch2(config)#ip default-gateway 192.168.200.1
+
+PC0> ping 192.168.200.10

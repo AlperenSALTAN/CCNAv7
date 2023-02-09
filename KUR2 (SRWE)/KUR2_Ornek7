@@ -1,0 +1,79 @@
+** Static EtherChannel ( on - on ) **
+
+Switch1>en
+conf t
+int range fa0/1-2
+channel-group 6 mode on
+exit
+int port-channel 6
+sw m t
+end
+Sh r
+Sh span vlan 1
+Sh int trunk
+Sh ethchannel summary
+Sh vlan brief
+
+Switch0>en
+conf t
+int range fa0/1-2
+channel-group 1 mode on
+exit
+int po 1
+sw m t
+end
+Sh r
+Sh span vlan 1
+Sh int trunk
+Sh ethchannel summary
+Sh vlan brief
+
+** PagP ( auto - desirable ) **
+
+Switch2>en
+Conf t
+İnt range fa0/1-3
+Channel-group 3 mode auto
+Exit
+İnt po 3
+Sw m t
+End
+Sh span vlan 1
+Sh vlan brief
+Sh int status
+Sh etherc sum
+
+Switch0> conf t
+İnt ra fa0/3-5
+Channel-group 2 mode desirable
+İnt po 2
+Sw m t
+Sh span vlan 1
+
+Switch2> sh etherchannel summary
+Sh span vlan 1
+
+*** IEEE - LACP ( Active - Passive ) ***
+
+Switch3>en
+Conf t
+İnt range fa0/1-4
+Channel-group 2 mode passive
+Exit
+İnt po 2
+Sw m t
+
+Switch0>int ra fa0/6-9
+Channel-group 3 mode active
+İnt po 3
+Sw m t
+Sh eth sum
+
+** Note: Sınavda cıkıyor. Eğer ki 3 kabloluluk 300 mbps'lik hattımın biri arızalnıp 200 mbit gibi değerlere düştüğünde bu Link Aggregation'i devre dışı bırak denebilir. ***
+
+Switch2> conf t
+İnt port-channel 3
+Lacp min-links 3 
+
+(3'den az port kalırsa LACP'yi kapatıyor her port kendi başına düşüyor. 1-16 arası arası yapılabilir.)
+

@@ -1,0 +1,82 @@
+/**            HSRP    - Active Router - Standby Router with Virtual Router - VLAN            **/
+
+PC-10 > 192.168.10.10 - 255.255.255.0 - 192.168.10.1
+PC-20 > 192.168.20.20 - 255.255.255.0 - 192.168.20.1
+
+Switch0(config)#vlan 10
+Switch0(config-vlan)#int fa0/1
+Switch0(config-if)#sw m a
+Switch0(config-if)#sw ac vl 10
+Switch0(config-if)#int fa0/2
+Switch0(config-if)#sw m t
+
+Switch1(config)#vlan 20
+Switch1(config-vlan)#int fa0/1
+Switch1(config-if)#sw m a
+Switch1(config-if)#sw ac vl 20
+Switch1(config-if)#int fa0/2
+Switch1(config-if)#sw m t
+
+3650-SW0(config)#vlan 10
+3650-SW0(config-vlan)#vlan 20
+3650-SW0(config-vlan)#exit
+3650-SW0(config)#int range gig1/0/1-2
+3650-SW0(config-if-range)#sw m t
+
+3650-SW1(config)#vlan 10
+3650-SW1(config-vlan)#vlan 20
+3650-SW1(config-vlan)#int range gi1/0/1-2
+3650-SW1(config-if-range)#sw m t
+3650-SW1(config-if-range)#end
+
+3650-SW1#conf t
+3650-SW1(config)#ip routing
+3650-SW1(config)#int vlan 10
+3650-SW1(config-if)#ip add 192.168.10.100 255.255.255.0
+// Burada bir vlan 10'a gateway tanımlarken vlan 10'un default gatewayini veremeyiz yoksa virtual router oluşmaz // 
+3650-SW1(config-if)#int vlan 20
+3650-SW1(config-if)#ip add 192.168.20.100 255.255.255.0
+// Burada bir vlan 10'a gateway tanımlarken vlan 20'un default gatewayini veremeyiz yoksa virtual router oluşmaz // 
+
+3650-SW0(config)#ip routing
+3650-SW0(config)#int vlan 10
+3650-SW0(config-if)#ip add 192.168.10.101 255.255.255.0
+// Burada bir vlan 10'a gateway tanımlarken vlan 10'un default gatewayini veremeyiz yoksa virtual router oluşmaz. Burada 2. sanal router'i oluşturmuş olduk // 
+3650-SW0(config-if)#int vlan 20
+3650-SW0(config-if)#ip add 192.168.20.101 255.255.255.0
+// Burada bir vlan 10'a gateway tanımlarken vlan 20'un default gatewayini veremeyiz yoksa virtual router oluşmaz. Burada 2. sanal router'i oluşturmuş olduk //
+
+// Biz burada PC'lere 1 ip adresini gateway olarak verdik fakat bunlara ulaşamayacağı için routing işlemi yapamayacak biz 1'e giderken bu 1'i sanallaştıracağız ve problem oluşmayacak //
+
+3650-SW0(config-if)#int vlan 10
+3650-SW0(config-if)#standby 10 ip 192.168.10.1
+3650-SW0(config-if)#standby 10 
+%HSRP-6-STATECHANGE: Vlan10 Grp 10 state Speak -> Standby
+
+%HSRP-6-STATECHANGE: Vlan10 Grp 10 state Standby -> Active
+// Burada otomatik olarak ortamda active bir cihaz olmadıgı için kendi ayarladı fakat biz priority'yi 0-255 arasında 200 yaptık default 100'dü. Yani standby cihaz haline getirdik.
+
+3650-SW0(config-if)#standby 10 pri
+3650-SW0(config-if)#standby 10 priority 200
+3650-SW0(config-if)#standby 10 preempt
+// Preempt özelliği ile eğer ki interface'de kabloda down up düşüp kalkma olayı olursa otomatik olarak yeniden devreye sok özelliğini aktifleştirdik isteğe bağlı 
+
+3650-SW1(config-if)#int vlan 10
+3650-SW1(config-if)#standby 10 ip 192.168.10.1
+3650-SW1(config-if)#standby 10 priority 0
+// Yanii eğer ortamda standby cihaz kalmazsa sen devreye gir diyoruz önceliğine ve sana preempt yazmama gerek yok zaten önceliğin 0. Ama iş vlan 20'ye geldiğinde tam tersi olacak
+3650-SW1(config-if)#int vlan 20
+3650-SW1(config-if)#standby 20 ip 192.168.20.1
+3650-SW1(config-if)#standby 20 prior
+3650-SW1(config-if)#standby 20 priority 255
+// kesinlikle vlan 20'nin standby router'i sen ol dedik.
+3650-SW1(config-if)#standby 20 preempt
+// ve eğer bu hat düşüp kalkarsa ve yeniden otomatik olarak sen standby ol dedik.
+
+3650-SW0(config-if)#int vlan 20
+3650-SW0(config-if)#standby 20 ip 192.168.20.1
+3650-SW0(config-if)#standby 20 priority 0
+
+3650-SW0#sh standby brief
+
+3650-SW1#sh standby brief

@@ -1,0 +1,55 @@
+outer>en
+Router#conf t
+Router(config)#int g0/0
+Router(config-if)#ip address 192.168.1.254 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#int g0/1
+Router(config-if)#ip add
+Router(config-if)#ip address 192.168.5.254 255.255.255.0
+Router(config-if)#no sh
+
+Switch>en
+Switch#conf t
+Switch(config)#hostname Switch1
+Switch1(config)#int vlan 1
+Switch1(config-if)#ip address 192.168.5.100 255.255.255.0
+Switch1(config-if)#no sh
+Switch1(config-if)#
+Switch1(config-if)#exit
+Switch1(config)#ip default
+Switch1(config)#ip default-gateway 192.168.5.254
+Switch1(config)#hostname misafir-switch
+misafir-switch(config)#ip domain
+misafir-switch(config)#ip dom
+misafir-switch(config)#ip domain-nam
+misafir-switch(config)#ip domain-name cisco.com
+misafir-switch(config)#cry
+misafir-switch(config)#crypto key gene
+misafir-switch(config)#crypto key generate rsa
+>> How many bits in the modulus [512]: 1024
+misafir-switch(config)#ip ssh version 2
+misafir-switch(config)#username guest secret guest
+misafir-switch(config)#username alperen secret alperen
+misafir-switch(config)#line vty 0 15
+misafir-switch(config-line)#transport input ssh
+misafir-switch(config-line)#login local
+misafir-switch(config-line)#exit
+misafir-switch(config)#service pas
+misafir-switch(config)#service password-encryption
+misafir-switch(config-line)#do wr m
+
+Router#conf t
+Router(config)#int loop
+Router(config)#int loopback 0
+Router(config-if)#ip add
+Router(config-if)#ip address 1.1.1.1 255.255.255.255
+Router(config-if)#no sh
+Router(config-if)#exit
+Router(config)#exit
+Router#sh ip route
+Router#wr m
+
+Switch0#show mac address-table
+
+Router#sh ip route
+Router#sh ip int brief

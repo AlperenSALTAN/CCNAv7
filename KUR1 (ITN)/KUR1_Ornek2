@@ -1,0 +1,118 @@
+Router0>en
+Router0#conf t
+Router0(config)#int gig0/0
+Router0(config-if)#description Yesil_Network
+Router0(config-if)#ip address 192.168.1.1 255.255.255.0
+Router0(config-if)#no sh
+Router0(config-if)#ex
+Router0(config)#int gig0/1
+Router0(config-if)#desc
+Router0(config-if)#description ISP-Baglantisi
+Router0(config-if)#ip address 200.1.1.1 255.255.255.252
+Router0(config-if)#no sh
+Router0(config-if)#do wr m
+
+Router2>en
+Router2#conf t
+Router2(config)#int g0/1
+Router2(config-if)#des
+Router2(config-if)#description Google DC
+Router2(config-if)#ip add 8.8.8.1 255.255.255.128
+Router2(config-if)#no sh
+Router2(config-if)#int gig0/0
+Router2(config-if)#des
+Router2(config-if)#description ISP
+Router2(config-if)#ip add 200.1.1.6 255.255.255.252
+Router2(config-if)#no sh
+
+ISP>en
+ISP#
+ISP#conf t
+ISP(config)#int g0/1
+ISP(config-if)#des
+ISP(config-if)#description google
+ISP(config-if)#ip add 200.1.1.5 255.255.255.252
+ISP(config-if)#no sh
+ISP(config-if)#int gig0/0
+ISP(config-if)#description yesil
+ISP(config-if)#ip add
+ISP(config-if)#ip address 200.1.1.2 255.255.255.252
+ISP(config-if)#no sh
+
+SW0>en
+SW0#conf t
+SW0#show mac address-table
+
+PC0> Arp -a
+PC0> Netstat -r
+
+Router0>en
+Router0#sh ip arp
+Router0#sh ip route
+
+PC0> ping 192.168.1.20
+PC0> Arp -a
+
+SW0#show mac address-table 
+SW0#clear mac address-table 
+
+PC0> arp -d
+PC0> Arp -a
+
+Router0#conf t
+Router0(config)#ip route 0.0.0.0 0.0.0.0 gi0/1
+Router0(config)#end
+Router0#sh ip route
+
+Router2>en
+Router2#conf t
+Router2(config)#ip route 192.168.1.0 255.255.255.0 gig0/0
+Router2(config)#sh ip route
+Router2(config)#do sh ip route
+
+ISP>en
+ISP#conf t
+ISP(config)#ip route 8.8.8.0 255.255.255.128 gig0/1
+ISP(config)#ip route 192.168.1.0 255.255.255.0 gig0/0
+ISP(config)#end
+ISP#sh ip route
+
+PC0>tracert 8.8.8.8
+PC0> ping 8.8.8.8
+Router0#sh ip arp
+
+SW0>en
+SW0#conf t
+SW0(config-if)#int vlan 1
+SW0(config-if)#ip add
+SW0(config-if)#ip address 192.168.1.100 255.255.255.0
+SW0(config-if)#no sh
+SW0(config)#ip default-gateway 192.168.1.1
+SW0(config)#hostname YESIL_SW0
+YESIL_SW0(config)#banner mot
+YESIL_SW0(config)#banner motd &
+Enter TEXT message. End with the character '&'.
+
+buraya sadece gorevli erisebilir
+CCNA-ITU
+
+&
+YESIL_SW0(config)#en sec
+YESIL_SW0(config)#ena
+YESIL_SW0(config)#enable sec
+YESIL_SW0(config)#enable secret ccna
+YESIL_SW0(config)#line vty 0 15
+YESIL_SW0(config-line)#pass
+YESIL_SW0(config-line)#password cisco
+YESIL_SW0(config-line)#login
+YESIL_SW0(config-line)#trans
+YESIL_SW0(config-line)#transport input telnet 
+YESIL_SW0(config-line)#service
+YESIL_SW0(config-line)#service pass
+YESIL_SW0(config-line)#service passw
+YESIL_SW0(config-line)#exit
+YESIL_SW0(config)#ser
+YESIL_SW0(config)#service pass
+YESIL_SW0(config)#service password-encryption 
+YESIL_SW0(config)#end
+YESIL_SW0#wr m
