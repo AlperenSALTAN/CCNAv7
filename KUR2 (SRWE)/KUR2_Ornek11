@@ -195,5 +195,3 @@ SW0(config-if-range)#spanning-tree bpduguard enable
 SW0(config)#int fa 0/1
 SW0(config-if)#sh
 SW0(config-if)#no sh
-
-![alt text](https://www.hizliresim.com/ekdob64)
