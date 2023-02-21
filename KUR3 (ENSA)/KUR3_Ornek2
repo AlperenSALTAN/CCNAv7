@@ -1,0 +1,220 @@
+---	2.Örnek	 ---
+/**            ACL - Standard & Extended ACL - OSPF - SSH - DNS - WEB                         **/
+
+PC0> 192.168.10.4/24 - 192.168.10.1 - 8.8.8.8
+PC1> 172.16.1.10/24 - 12.16.1.1 - 8.8.8.8
+DNS> 8.8.8.8/24 - 8.8.8.1 - 8.8.8.8
+User-WEB> 8.8.8.10 - 8.8.8.1 - 8.8.8.8 
+// Kullanıcılar da adminlerle beraber aynı DNS sunucusunu kullandıgı için hepsinin DNS adresi DNS sunucusu olacak.
+Admin-WEB> 8.8.8.100 - 8.8.8.1 - 8.8.8.8
+
+R0(config)#int gi0/0
+R0(config-if)#ip add 192.168.10.1 255.255.255.0
+R0(config-if)#
+R0(config-if)#no sh
+R0(config-if)#int gi0/1
+R0(config-if)#ip add 1.1.1.2 255.255.255.0
+R0(config-if)#no sh
+
+R3(config)#int gi0/0
+R3(config-if)#ip add 172.16.1.1 255.255.255.0
+R3(config-if)#no sh
+R3(config-if)#int gi0/1
+R3(config-if)#ip add 3.3.3.2 255.255.255.0
+R3(config-if)#no sh
+
+R2(config)#int gi0/0
+R2(config-if)#ip add 8.8.8.1 255.255.255.0
+R2(config-if)#no sh
+R2(config-if)#int gi0/1
+R2(config-if)#ip add 2.2.2.2 255.255.255.0
+R2(config-if)#no sh
+
+ISP(config)#int g0/0
+ISP(config-if)#ip add 1.1.1.1 255.255.255.0
+ISP(config-if)#no sh
+ISP(config-if)#int g0/1
+ISP(config-if)#ip add 2.2.2.1 255.255.255.0
+ISP(config-if)#no sh
+ISP(config-if)#int g0/2
+ISP(config-if)#ip add 3.3.3.1 255.255.255.0
+ISP(config-if)#no sh
+
+DNS>Services>DNS> user.cisco.com - 8.8.8.10 (A Record)
+                                      admin.cisco.com - 8.8.8.100 ( A Record)
+
+USER-WEB>Services>HTTP> index.html > Merhaba Kullanıcı
+Admin-WEB>Services>HTTP> index.html > Merhaba Admin
+
+ISP(config)#hostname Core
+Core(config)#ip domain-name turktelekom.com
+Core(config)#crypto key generate rsa general-keys
+Core(config)#1024
+Core(config)#ip ssh
+Core(config)#ip ssh version 2
+// günümüzde ssh version 1.99'u cok güvenli bulmadıgımız için version 2'ye geçtik.
+Core(config)#username alperen secret ccna
+Core(config)#enable secret ccna
+Core(config)#line vty 0 15
+Core(config-line)#transport input ssh
+Core(config-line)#login local
+// bütün virtual-terminalleri seçerek bu işlemi uyguladık ve ssh tipinde bir transport olacağını ve local veritabanındaki username'e bakacağını belirttik.
+
+R0(config)#router ospf 10
+// hiçbir yapılandırma olmadan direkt OSPF'e bir id vererek çalıştırırız.
+R0(config-router)#int ra gi0/0-1
+R0(config-if-range)#ip ospf 10 area 0
+
+R3(config)#router ospf 10
+R3(config-router)#exit
+R3(config)#int ra gi0/0-1
+R3(config-if-range)#ip ospf 10 area 0
+
+R2(config)#router ospf 10
+R2(config-router)#int ra gi0/0-1
+R2(config-if-range)#ip ospf 10 area 0
+
+Core(config)#router ospf 10
+Core(config-router)#int range gi0/0-2
+Core(config-if-range)#ip ospf 10 area 0
+Core(config-if-range)#do sh ip ospf neigh
+Core#sh ip route
+
+PC0> Web Browser > admin.cisco.com & user.cisco.com
+
+R3(config)#access-list ?
+	<1-99> IP standard access list
+	<100-199> IP extended access list
+R3(config)#access-list 1 ?
+	deny Specify packets to reject
+	permit Specify packets to forward
+	remark Access list entry comment
+R3(config)#access-list 1 remark Sadece Admin Bilgisayari gecebilir.
+//Remark ile bu ACL'ye bir yorum yazabiliyoruz, aciklama oluyor.
+R3(config)#access-list 1 permit ?
+	A.B.C.D Address to match
+	any Any source host
+	host A single host address
+R3(config)#access-list 1 permit 172.16.1.10 ?
+	A.B.C.D Wildcard bits
+	<cr>
+R3(config)#access-list 1 permit 172.16.1.10
+// Sadece Source IP adresi yazark standart ACL'lerde yapabiliriz. Şuanda sadece bu IP adresinden herşeye izin verdik, geri kalan IP adreslerine hiçbir şekilde izin verilmedi.
+R3(config)#do sh access-list
+R3(config)#int gi0/0
+R3(config-if)#ip access-group 1 ?
+	in inbound packets
+	out outbound packets
+R3(config-if)#ip access-group 1 in
+// Bu İnterface'in iç tarafından Diğer tarafa çıkacakken uygulamasına izin verdik.
+
+Core(config)#ip access-list standard ?
+	<1-99> Standard IP access-list number
+	WORD Access-list name
+Core(config)#ip access-list standard Ev_network_izinleri
+Core(config-std-nacl)#?
+	<1-2147483647> Sequence Number
+	default Set a command to its defaults
+	deny Specify packets to reject
+	exit Exit from access-list configuration mode
+	no Negate a command or set its defaults
+	permit Specify packets to forward
+	remark Access list entry comment
+Core(config-std-nacl)#5 permit host 1.1.1.2
+// Standart ACL'lerde TCP/UDP gibi bir filtreleme yapamıyoruz. 
+Core(config-std-nacl)#permit 192.168.10.0 0.0.0.255
+// Wildcard'in burda S.M.'in tam tersi olacak.
+Core#sh access-lists
+// Otomatik olarak en alttaki satırın 10 altından az önce oluşturdugumuz Kurala bir Sequence number eklemiş oldu
+Core(config)#int gi0/0
+Core(config-if)#ip access-group Ev_network_izinleri in
+// Gi0/0 interface'inde artık Ev_network_izinleri'ni uyguladık.
+Core(config)#ip access-list standard DC_Izinleri
+Core(config-std-nacl)#10000 permit 8.8.8.0 0.0.0.255
+Core(config-std-nacl)#permit host 2.2.2.2
+Core#sh access-lists
+// Baktıgımız zaman birkaç adet 1.1.1.2 tarafından matches'ler oluştugunu görüyoruz bunun sebebi OSPF'deki hello paketlerinin haberleşmesi
+Core(config)#int gi0/1
+Core(config-if)#ip access-group DC_Izinleri in
+Core(config)#ip access-list standard 10
+Core(config-std-nacl)#permit host 3.3.3.2
+Core(config-std-nacl)#permit 172.16.1.0 0.0.0.255
+Core(config-std-nacl)#end
+Core#sh access-lists 
+Core(config)#int gi0/2
+Core(config-if)#ip access-group 10 in
+
+R2(config)#ip access-list extended DC_Hizmetlerim
+R2(config-ext-nacl)#permit ?
+	ahp Authentication Header Protocol
+	eigrp Cisco's EIGRP routing protocol
+	esp Encapsulation Security Payload
+	gre Cisco's GRE tunneling
+	icmp Internet Control Message Protocol
+	ip Any Internet Protocol
+	ospf OSPF routing protocol
+	tcp Transmission Control Protocol
+	udp User Datagram Protocol
+R2(config-ext-nacl)#permit udp ?
+	A.B.C.D Source address
+	any Any source host
+	host A single source host
+R2(config-ext-nacl)#permit udp any ?
+	A.B.C.D Destination address
+	any Any destination host
+	eq Match only packets on a given port number
+	gt Match only packets with a greater port number
+	host A single destination host
+	lt Match only packets with a lower port number
+	neq Match only packets not on a given port number
+	range Match only packets in the range of port numbers
+R2(config-ext-nacl)#permit udp any range ?
+	<0-65535> Port number
+	bootpc Bootstrap Protocol (BOOTP) client (68)
+	bootps Bootstrap Protocol (BOOTP) server (67)
+	domain Domain Name Service (DNS, 53)
+	isakmp Internet Security Association and Key Management Protocol (500)
+	non500-isakmp Internet Security Association and Key Management Protocol (4500)
+	snmp Simple Network Management Protocol (161)
+	tftp Trivial File Transfer Protocol (69)
+R2(config-ext-nacl)#permit udp any range 0 65535 host 8.8.8.8 eq 53
+// UDP'den herhangi bir kaynaktan 0-65535 portlarından 8.8.8.8 hostuna UDP:53'den izin ver. ( DNS için)
+R2(config-ext-nacl)#permit tcp any host 8.8.8.10 eq 80
+R2(config-ext-nacl)#permit tcp any host 8.8.8.10 eq 443
+// TCP'den 8.8.8.10 adresine herhangi bir kaynaktan tcp 80 ve tcp 443'e erişime izin verdik
+(Kullanıcı WEB)
+R2(config-ext-nacl)#permit tcp 172.16.1.0 0.0.0.255 range 0 65535 host 8.8.8.100 eq 80
+R2(config-ext-nacl)#permit tcp 172.16.1.0 0.0.0.255 range 0 65535 host 8.8.8.100 eq 443
+// TCP'den 8.8.8.100 adresine herhangi bir kaynaktan tcp 80 ve tcp 443'e erişime izin verdik
+(Admin WEB)
+R2#sh access-lists 
+R2(config)#int gi0/0
+R2(config-if)#ip access-group DC_Hizmetlerim out
+//Bu interface'de DC Hizmetlerim ACL'den çıkacak paketlerde uygula
+
+R0(config)#ip access-list extended PC0_dan_dunyaya
+R0(config-ext-nacl)#permit tcp any any eq 80
+R0(config-ext-nacl)#permit tcp any any eq 443
+// Bu ağdan başka herhangi bir cihaz geçmeyeceği için any diyoruz ve internete cıkacağı için hedef de any olacak ve TCP 80 ve TCP 443'den izin verdik
+R0(config-ext-nacl)#permit udp any host 8.8.8.8 eq 53
+// UDP'den herhangi bir kaynaktan 8.8.8.8 hedefine UDP53'den erişime izin verdik.
+R0#sh access-lists
+R0(config)#ip access-list ex Dunyadan_Eve
+R0(config-ext-nacl)#permit tcp any any established
+// Ev networku dunyadan herhangi bir yere cıkabilir ama dünyadan ev networkune başka herhangi bir paket gelemez eğer ki biz dünyaya paket göndermediysek.
+R0(config-ext-nacl)#permit udp host 8.8.8.8 eq 53 any
+// 8.8.8.8 Hostundan HOST 53'den herhangi bir cihazdan bu ağa geçişe izin verdik.
+R0#sh ip access-lists
+R0(config-if)#ip access-group PC0_dan_dunyaya in
+R0(config-if)#ip access-group Dunyadan_Eve out
+
+Core(config)#access-list 99 permit 172.16.1.0 0.0.0.255
+Core(config)#line vty 0 15
+Core(config-line)#access-cla
+Core(config-line)#access-class 99 in
+
+R2(config)#ip access-list ex DC_Hizmetlerim
+R2(config-ext-nacl)#deny ip any any
+// PC0'dan dunyaya olan ACL'de bütün ip'lerden gelen ve bütün hedeflere giden ip'leri sıfırla
+// Normal koşullarda biz PC0'dan admin.cisco.com gibi bir siteye cıkmaya kalktıgımızda cıkamayacağız ve bunu show access-list ile görebiliyoruz kaç adet çöpe atılan paket oldugunu
+R2#sh access-lists 
